@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% block title %}Financial Report{% endblock %}
+{% block content %}
+<div class="topbar report-header">
+  <div>
+    <p class="eyebrow">PAISAPATH AI ANALYTICS</p>
+    <h1>Financial report</h1>
+    <p class="muted">A clear summary of your financial health, spending, savings, budgets and goals.</p>
+  </div>
+  <div class="report-actions">
+    <form method="get" class="report-period-form">
+      <label>Period
+        <select name="preset">
+          {% for value, label in [('this_month', 'This month'), ('last_month', 'Last month'), ('last_3_months', 'Last 3 months'), ('last_6_months', 'Last 6 months'), ('this_year', 'This year'), ('custom', 'Custom date range')] %}
+          <option value="{{ value }}" {% if preset == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% if preset == 'custom' %}
+      <label>From<input type="date" name="start_date" value="{{ start_date.isoformat() if start_date else '' }}"></label>
+      <label>To<input type="date" name="end_date" value="{{ end_date.isoformat() if end_date else '' }}"></label>
+      {% endif %}
+      <button class="btn btn-dark" type="submit">Apply</button>
+    </form>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-dark" href="{{ url_for('main.export_report_csv', preset=preset, start_date=start_date.isoformat() if start_date else '', end_date=end_date.isoformat() if end_date else '') }}">Export CSV</a>
+      <button class="btn btn-outline-dark" type="button" onclick="window.print()">Print / PDF</button>
+    </div>
+  </div>
+</div>
+<p class="report-period-label muted">{{ analytics.period.start.strftime('%d %b %Y') }} to {{ analytics.period.end.strftime('%d %b %Y') }}</p>
+
+<section class="stat-grid report-summary-grid">
+  <div class="stat-card"><span>Income</span><strong>₹{{ '{:,.0f}'.format(metrics.total_income) }}</strong><small>Money in for this period</small></div>
+  <div class="stat-card"><span>Expenses</span><strong>₹{{ '{:,.0f}'.format(metrics.total_expenses) }}</strong><small>Money out for this period</small></div>
+  <div class="stat-card accent"><span>Savings</span><strong>₹{{ '{:,.0f}'.format(metrics.total_savings) }}</strong><small>Net savings</small></div>
+  <div class="stat-card"><span>Savings rate</span><strong>{{ '{:.1f}'.format(metrics.savings_rate) }}%</strong><small>Income saved</small></div>
+</section>
+
+<div class="report-grid report-chart-grid">
+  <section class="panel report-section report-chart-section">
+    <div class="panel-heading"><div><p class="eyebrow">CASH FLOW</p><h2>Income vs expenses</h2><p class="muted report-subtitle">Compare your income, expenses and savings over time.</p></div></div>
+    {% if metrics.total_income or metrics.total_expenses %}
+    <div class="analytics-chart report-chart"><canvas id="reportCashFlowChart"></canvas></div>
+    {% if not analytics.has_historical_data %}<p class="muted report-note">Not enough historical data yet. The available period is shown above.</p>{% endif %}
+    {% else %}<div class="report-empty"><strong>No historical data available yet.</strong><span>Add more income and expense records to see your trend.</span></div>{% endif %}
+  </section>
+  <section class="panel report-section report-chart-section">
+    <div class="panel-heading"><div><p class="eyebrow">SPENDING BREAKDOWN</p><h2>Expense breakdown</h2><p class="muted report-subtitle">See where your money is going.</p></div></div>
+    {% if analytics.category_breakdown %}
+    <div class="analytics-chart report-chart report-donut-chart"><canvas id="reportCategoryChart"></canvas></div>
+    <div class="report-legend">{% for item in analytics.category_breakdown %}<div class="report-legend-row"><span>{{ item.category }}</span><strong>₹{{ '{:,.0f}'.format(item.amount) }} <small>{{ '{:.2f}'.format(item.percentage) }}%</small></strong></div>{% endfor %}</div>
+    {% else %}<div class="report-empty"><strong>No expense data available yet.</strong><span>Add expenses to see your spending breakdown.</span></div>{% endif %}
+  </section>
+</div>
+
+<section class="panel report-section">
+  <div class="panel-heading"><div><p class="eyebrow">GOAL PROGRESS</p><h2>Track progress toward your financial goals</h2></div><a href="{{ url_for('finance.goals') }}">Manage goals →</a></div>
+  {% for goal in analytics.goals %}
+  <div class="report-goal-row">
+    <div class="report-goal-heading"><div><strong>{{ goal.goal_name }}</strong><small class="muted">₹{{ '{:,.0f}'.format(goal.amount_saved) }} / ₹{{ '{:,.0f}'.format(goal.goal_amount) }}</small></div><strong>{{ '{:.1f}'.format(goal.progress_percentage) }}%</strong></div>
+    <div class="progress"><div style="width:{{ [goal.progress_percentage, 100]|min }}%"></div></div>
+    <div class="report-goal-meta"><span>Remaining: ₹{{ '{:,.0f}'.format(goal.remaining_amount) }}</span>{% if goal.target_date %}<span>Target: {{ goal.target_date.strftime('%d %b %Y') }}</span>{% endif %}{% if goal.goal_status == 'Completed' %}<span class="text-success">✓ Goal completed</span>{% elif goal.target_date %}<span>Required monthly: ₹{{ '{:,.0f}'.format(goal.monthly_required) }}</span>{% else %}<span>Estimated monthly: ₹{{ '{:,.0f}'.format(goal.monthly_required) }}</span>{% endif %}</div>
+  </div>
+  {% else %}<div class="report-empty"><strong>No active goals yet.</strong><span>Create a goal to track your progress.</span></div>{% endfor %}
+</section>
+
+<section class="panel report-section">
+  <div class="panel-heading"><div><p class="eyebrow">BUDGET CONTROL</p><h2>Budget vs actual</h2><p class="muted report-subtitle">Compare your planned budget with your actual spending.</p></div></div>
+  {% if analytics.budget_data_available %}
+  <div class="analytics-chart report-chart report-budget-chart"><canvas id="reportBudgetChart"></canvas></div>
+  <div class="table-responsive"><table class="report-table"><thead><tr><th>Category</th><th>Budget</th><th>Actual</th><th>Variance</th><th>Status</th></tr></thead><tbody>{% for item in analytics.budget_vs_actual %}<tr><td>{{ item.category }}</td><td>₹{{ '{:,.0f}'.format(item.budget) }}</td><td>₹{{ '{:,.0f}'.format(item.actual) }}</td><td class="{% if item.variance > 0 %}text-danger{% else %}text-success{% endif %}">{% if item.variance > 0 %}+{% endif %}₹{{ '{:,.0f}'.format(item.variance) }}</td><td>{% if item.variance > 0 %}Over budget by ₹{{ '{:,.0f}'.format(item.variance) }}{% else %}Within budget{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+  {% else %}<div class="report-empty"><strong>No budget data available yet.</strong><span>Create a budget category to see planned vs actual spending.</span></div>{% endif %}
+</section>
+
+<div class="report-grid">
+  <section class="panel report-section"><p class="eyebrow">FINANCIAL SUMMARY</p><h2>Health at a glance</h2><div class="report-fact-list"><div><span>Income</span><strong>₹{{ '{:,.0f}'.format(metrics.total_income) }}</strong></div><div><span>Expenses</span><strong>₹{{ '{:,.0f}'.format(metrics.total_expenses) }}</strong></div><div><span>Savings</span><strong>₹{{ '{:,.0f}'.format(metrics.total_savings) }}</strong></div><div><span>Savings rate</span><strong>{{ '{:.1f}'.format(metrics.savings_rate) }}%</strong></div><div><span>Budget utilization</span><strong>{{ '{:.1f}'.format(metrics.budget_utilization) }}%</strong></div><div><span>Active goals</span><strong>{{ analytics.active_goal_count }}</strong></div></div></section>
+  <section class="panel report-section"><p class="eyebrow">KEY INSIGHTS</p><h2>What stands out</h2>{% if analytics.insights %}<ul class="report-insights">{% for insight in analytics.insights %}<li>{{ insight }}</li>{% endfor %}</ul>{% else %}<div class="report-empty compact"><span>Add income, expense, budget, or goal data to generate report insights.</span></div>{% endif %}</section>
+</div>
+
+<script>
+  const reportMoney = value => '₹' + Number(value || 0).toLocaleString('en-IN');
+  const reportTrend = {{ analytics.trend|tojson }};
+  const reportCategories = {{ analytics.category_breakdown|tojson }};
+  const reportBudgets = {{ analytics.budget_vs_actual|tojson }};
+
+  const reportCashFlowCanvas = document.getElementById('reportCashFlowChart');
+  if (reportCashFlowCanvas) new Chart(reportCashFlowCanvas, { type: 'line', data: { labels: reportTrend.map(item => item.label), datasets: [
+    { label: 'Income', data: reportTrend.map(item => item.income), borderColor: '#0f766e', backgroundColor: 'rgba(15,118,110,.08)', fill: true, tension: .3 },
+    { label: 'Expenses', data: reportTrend.map(item => item.expenses), borderColor: '#e76f51', backgroundColor: 'rgba(231,111,81,.08)', fill: true, tension: .3 },
+    { label: 'Savings', data: reportTrend.map(item => item.savings), borderColor: '#264653', backgroundColor: 'rgba(38,70,83,.08)', fill: true, tension: .3 }
+  ] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { callback: reportMoney } } }, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: context => context.dataset.label + ': ' + reportMoney(context.raw) } } } } });
+
+  const doughnutPercentagePlugin = {
+    id: 'doughnutPercentage',
+    afterDraw(chart) {
+      if (chart.config.type !== 'doughnut') return;
+      const { ctx } = chart;
+      const meta = chart.getDatasetMeta(0);
+      if (!meta || !meta.data || !meta.data.length) return;
+      const dataset = chart.data.datasets[0];
+      const total = dataset.data.reduce((a, b) => a + Number(b || 0), 0);
+      if (!total) return;
+
+      ctx.save();
+      meta.data.forEach((element, index) => {
+        const value = Number(dataset.data[index] || 0);
+        const percentage = (value / total) * 100;
+        if (percentage < 3) return;
+
+        const { startAngle, endAngle, innerRadius, outerRadius, x, y } = element;
+        const midAngle = startAngle + (endAngle - startAngle) / 2;
+        const midRadius = innerRadius + (outerRadius - innerRadius) / 2;
+        const posX = x + Math.cos(midAngle) * midRadius;
+        const posY = y + Math.sin(midAngle) * midRadius;
+
+        ctx.font = 'bold 11px Inter, system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 1;
+
+        const text = (percentage % 1 === 0 ? percentage.toFixed(0) : percentage.toFixed(1)) + '%';
+        ctx.fillText(text, posX, posY);
+      });
+      ctx.restore();
+    }
+  };
+
+  const reportCategoryCanvas = document.getElementById('reportCategoryChart');
+  if (reportCategoryCanvas) new Chart(reportCategoryCanvas, {
+    type: 'doughnut',
+    plugins: [doughnutPercentagePlugin],
+    data: {
+      labels: reportCategories.map(item => item.category),
+      datasets: [{
+        data: reportCategories.map(item => item.amount),
+        backgroundColor: ['#0f766e', '#e76f51', '#f59e0b', '#264653', '#2a9d8f', '#64748b', '#6366f1', '#ec4899'],
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '52%',
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: context => {
+              const item = reportCategories[context.dataIndex];
+              return item.category + ': ' + reportMoney(item.amount) + ' (' + item.percentage.toFixed(2) + '%)';
+            }
+          }
+        }
+      }
+    }
+  });
+
+  const reportBudgetCanvas = document.getElementById('reportBudgetChart');
+  if (reportBudgetCanvas) new Chart(reportBudgetCanvas, { type: 'bar', data: { labels: reportBudgets.map(item => item.category), datasets: [{ label: 'Budget', data: reportBudgets.map(item => item.budget), backgroundColor: '#b8dcd5' }, { label: 'Actual', data: reportBudgets.map(item => item.actual), backgroundColor: '#e76f51' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { callback: reportMoney } } }, plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: context => context.dataset.label + ': ' + reportMoney(context.raw) } } } } });
+</script>
+{% endblock %}

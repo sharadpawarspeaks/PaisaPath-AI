@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}{{ goal.name }} · Goal details{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <a href="{{ url_for('finance.goals') }}">← Back to Goals</a>
+    <p class="eyebrow mt-3">GOAL DETAILS</p>
+    <h1>🎯 {{ goal.name }}</h1>
+    <p class="muted">{{ goal.description or 'A clear plan for a future milestone.' }}</p>
+    <p class="muted">Target: <strong>{{ calculation.target_date.strftime('%d %b %Y') if calculation.target_date else 'No deadline set' }}</strong></p>
+  </div>
+  <div class="tag">{{ calculation.feasibility_label }}</div>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card"><span>{% if calculation.target_date %}Time remaining{% else %}Estimated time{% endif %}</span><strong>{% if calculation.target_date %}{{ calculation.remaining_days }}{% else %}{{ calculation.estimated_months_to_goal or '—' }}{% endif %}</strong><small>{% if calculation.target_date %}days{% else %}months{% endif %}</small></div>
+  <div class="stat-card"><span>{% if calculation.target_date %}Required daily{% else %}Available monthly{% endif %}</span><strong>₹{{ '{:,.0f}'.format(calculation.daily_required if calculation.target_date else calculation.available_goal_contribution) }}</strong><small>{% if calculation.target_date %}per day{% else %}capacity{% endif %}</small></div>
+  <div class="stat-card"><span>{% if calculation.target_date %}Required weekly{% else %}Estimated time{% endif %}</span><strong>{% if calculation.target_date %}₹{{ '{:,.0f}'.format(calculation.weekly_required) }}{% else %}{{ calculation.estimated_years_to_goal or '—' }}{% endif %}</strong><small>{% if calculation.target_date %}per week{% else %}years{% endif %}</small></div>
+  <div class="stat-card accent"><span>{% if calculation.target_date %}Required monthly{% else %}Completion{% endif %}</span><strong>{% if calculation.target_date %}₹{{ '{:,.0f}'.format(calculation.monthly_required) }}{% else %}{{ calculation.projected_completion_date.strftime('%b %Y') if calculation.projected_completion_date else '—' }}{% endif %}</strong><small>{% if calculation.target_date %}per month{% else %}projection{% endif %}</small></div>
+</div>
+
+<div class="grid-2">
+  <section class="panel">
+    <p class="eyebrow">GOAL PROGRESS</p>
+    <h2>₹{{ '{:,.0f}'.format(calculation.amount_saved) }} saved of ₹{{ '{:,.0f}'.format(calculation.goal_amount) }}</h2>
+    <p class="muted">₹{{ '{:,.0f}'.format(calculation.remaining_amount) }} remaining · {{ calculation.progress_percentage }}% complete</p>
+    <div class="progress"><div style="width:{{ calculation.progress_percentage }}%"></div></div>
+    <div class="recommendation mt-3">
+      {% if calculation.target_date %}{{ calculation.remaining_days }} days remaining → ₹{{ '{:,.0f}'.format(calculation.daily_required) }}/day<br>
+      {{ calculation.remaining_weeks }} weeks remaining → ₹{{ '{:,.0f}'.format(calculation.weekly_required) }}/week<br>
+      {{ calculation.remaining_months }} months remaining → ₹{{ '{:,.0f}'.format(calculation.monthly_required) }}/month<br>
+      {{ calculation.remaining_years }} years remaining → ₹{{ '{:,.0f}'.format(calculation.annualized_required) }}/year annualized{% else %}Estimated completion: {{ calculation.projected_completion_date.strftime('%d %b %Y') if calculation.projected_completion_date else 'Add expenses to estimate' }}{% endif %}
+    </div>
+    <p class="muted mt-3">Available for this goal: <strong>₹{{ '{:,.0f}'.format(calculation.available_goal_contribution) }}/month</strong><br>Feasibility: <strong>{{ calculation.feasibility_label }}</strong></p>
+    {% if calculation.feasibility_reason %}<div class="recommendation">{{ calculation.feasibility_reason }}</div>{% endif %}
+  </section>
+
+  <section class="panel">
+    <p class="eyebrow">INCOME</p>
+    <h2>₹{{ '{:,.0f}'.format(calculation.current_salary) }}/month</h2>
+    <p class="muted">Current salary · Annual salary ₹{{ '{:,.0f}'.format(calculation.current_salary * 12) }}{% if calculation.target_date and calculation.projected_salary_at_target != calculation.current_salary %}<br>Projected salary at target: ₹{{ '{:,.0f}'.format(calculation.projected_salary_at_target) }}/month{% endif %}</p>
+    {% if calculation.salary_increment_percentage > 0 %}
+    <p>Next salary: <strong>₹{{ '{:,.0f}'.format(calculation.next_salary) }}/month</strong><br>Increment: <strong>{{ calculation.salary_increment_percentage }}%</strong><br>Effective: <strong>{{ calculation.salary_increment_effective_date.strftime('%d %b %Y') if calculation.salary_increment_effective_date else 'Not set' }}</strong></p>
+    <div class="recommendation">{% if calculation.salary_increment_affects_goal %}This salary increment is included because it begins before the goal target date.{% else %}{{ calculation.salary_explanation }}{% endif %}</div>
+    {% else %}<p class="muted">No future salary increment is recorded.</p>{% endif %}
+  </section>
+</div>
+
+{% if calculation.long_term_projection %}
+<section class="panel mt-4">
+  <p class="eyebrow">PROJECTED, NOT GUARANTEED</p>
+  <h2>Year-by-year projection</h2>
+  <div class="table-responsive mt-3"><table><thead><tr><th>Year</th><th>Monthly income</th><th>Annual income</th><th>Projected expenses</th><th>Available savings</th><th>Cumulative savings</th><th>Goal remaining</th></tr></thead><tbody>{% for row in calculation.long_term_projection %}<tr><td>{{ row.year }}</td><td>₹{{ '{:,.0f}'.format(row.monthly_income) }}</td><td>₹{{ '{:,.0f}'.format(row.annual_income) }}</td><td>₹{{ '{:,.0f}'.format(row.projected_expenses) }}</td><td>₹{{ '{:,.0f}'.format(row.available_savings) }}</td><td>₹{{ '{:,.0f}'.format(row.cumulative_savings) }}</td><td>₹{{ '{:,.0f}'.format(row.goal_remaining) }}</td></tr>{% endfor %}</tbody></table></div>
+</section>
+{% endif %}
+
+<section class="panel mt-4">
+  <p class="eyebrow">WHAT IF?</p>
+  <h2>Test a contribution pace</h2>
+  <form method="post" class="form-grid">
+    <label>Contribution amount<input type="number" name="amount" min="0" step="0.01" required placeholder="10000"></label>
+    <label>Frequency<select name="frequency"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly" selected>Monthly</option></select></label>
+    <button class="btn btn-primary wide">Calculate scenario</button>
+  </form>
+  {% if scenario %}
+  <div class="recommendation mt-3">
+    Scenario: ₹{{ '{:,.0f}'.format(scenario.scenario.amount) }}/{{ scenario.scenario.frequency }}<br>
+    Monthly equivalent: ₹{{ '{:,.0f}'.format(scenario.current_savings_rate) }}<br>
+    {% if scenario.projected_completion_date %}Projected completion: <strong>{{ scenario.projected_completion_date.strftime('%d %b %Y') }}</strong>{% else %}Projected completion is unavailable until a positive contribution is entered.{% endif %}<br>
+    {% if scenario.savings_shortfall > 0 %}Monthly shortfall: ₹{{ '{:,.0f}'.format(scenario.savings_shortfall) }}{% else %}This scenario meets the required monthly pace.{% endif %}
+  </div>
+  {% endif %}
+</section>
+
+<details class="panel mt-4">
+  <summary><strong>How is this calculated?</strong></summary>
+  <p class="muted mt-3">Remaining amount = target amount minus saved amount. Daily and weekly requirements use the exact remaining days. Monthly requirements use calendar time expressed through the average Gregorian month. Salary increments are included only when their effective date is on or before the goal target date.</p>
+</details>
+{% endblock %}

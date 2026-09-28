@@ -1,0 +1,319 @@
+{% extends 'base.html' %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <p class="eyebrow">YOUR FINANCIAL CONTEXT & SETTINGS</p>
+    <h1>Personal Finance Profile</h1>
+    <p class="muted">Manage your personal information, view your real-time financial snapshot, and customize your preferences.</p>
+  </div>
+</div>
+
+<!-- 1. PROFILE HEADER -->
+<section class="panel profile-header-card">
+  <div class="profile-user-info">
+    <div class="profile-avatar">
+      {{ current_user.name[:1]|upper if current_user.name else 'U' }}
+    </div>
+    <div class="profile-details">
+      <h2>{{ current_user.name }}</h2>
+      <p class="muted">{{ current_user.email }} · <span class="tag">{{ current_user.user_type or 'Personal Finance Profile' }}</span></p>
+      <small class="muted">Personal Finance Profile</small>
+    </div>
+  </div>
+  <div>
+    <a href="#editProfileSection" class="btn btn-dark" onclick="document.getElementById('editProfileCard').scrollIntoView({behavior: 'smooth'});">Edit Profile</a>
+  </div>
+</section>
+
+<!-- 3. FINANCIAL SNAPSHOT -->
+<div class="mb-3">
+  <p class="eyebrow">CURRENT MONTH</p>
+  <h2>Financial Snapshot</h2>
+</div>
+<section class="stat-grid mb-4">
+  <div class="stat-card">
+    <span>Monthly Income</span>
+    <strong>₹{{ '{:,.0f}'.format(metrics.total_income) }}</strong>
+    <small>Money in for this period</small>
+  </div>
+  <div class="stat-card">
+    <span>Monthly Expenses</span>
+    <strong>₹{{ '{:,.0f}'.format(metrics.total_expenses) }}</strong>
+    <small>Money out for this period</small>
+  </div>
+  <div class="stat-card accent">
+    <span>Net Savings</span>
+    <strong>₹{{ '{:,.0f}'.format(metrics.total_savings) }}</strong>
+    <small>Net monthly savings</small>
+  </div>
+  <div class="stat-card">
+    <span>Savings Rate</span>
+    <strong>{{ '{:.1f}'.format(metrics.savings_rate) }}%</strong>
+    <small>Income saved</small>
+  </div>
+</section>
+
+<!-- MAIN TWO-COLUMN CONTENT -->
+<div class="report-grid">
+  <!-- LEFT COLUMN: Personal Info & Edit Profile & Preferences -->
+  <div class="d-flex flex-column gap-3">
+    
+    <!-- 2. PERSONAL INFORMATION & EDIT PROFILE -->
+    <section class="panel" id="editProfileCard">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">ACCOUNT DETAILS</p>
+          <h2>Personal Information</h2>
+        </div>
+      </div>
+
+      <div class="profile-info-list">
+        <div class="profile-info-item">
+          <span>Full Name</span>
+          <strong>{{ current_user.name }}</strong>
+        </div>
+        <div class="profile-info-item">
+          <span>Email Address</span>
+          <strong>{{ current_user.email }}</strong>
+        </div>
+        <div class="profile-info-item">
+          <span>User Type</span>
+          <strong>{{ current_user.user_type }}</strong>
+        </div>
+        <div class="profile-info-item">
+          <span>Member Since</span>
+          <strong>{{ current_user.created_at.strftime('%B %Y') if current_user.created_at else 'Active' }}</strong>
+        </div>
+      </div>
+
+      <hr class="my-4" style="border-color: var(--line);">
+
+      <div id="editProfileSection">
+        <h3 class="h5 mb-3">Edit Profile</h3>
+        <form method="post" class="form-grid">
+          <label>Full Name
+            <input name="name" value="{{ current_user.name }}" required>
+          </label>
+          <label>Email
+            <input value="{{ current_user.email }}" disabled>
+          </label>
+          <label>Occupation / Status
+            <select name="user_type">
+              <option value="Student" {% if current_user.user_type == 'Student' %}selected{% endif %}>Student</option>
+              <option value="Salaried Professional" {% if current_user.user_type == 'Salaried Professional' %}selected{% endif %}>Salaried Professional</option>
+              <option value="Freelancer" {% if current_user.user_type == 'Freelancer' %}selected{% endif %}>Freelancer</option>
+              <option value="Household Manager" {% if current_user.user_type == 'Household Manager' %}selected{% endif %}>Household Manager</option>
+            </select>
+          </label>
+          <label>Expected Monthly Income (₹)
+            <input type="number" name="monthly_income" value="{{ current_user.monthly_income_preference }}" min="0" step="0.01">
+          </label>
+          <label>Monthly Savings Target (₹)
+            <input type="number" name="savings_target" value="{{ current_user.monthly_savings_target }}" min="0" step="0.01">
+          </label>
+          <label class="wide">Primary Financial Goal
+            <input name="financial_goal" value="{{ current_user.financial_goal }}" placeholder="e.g. Save ₹100,000 for emergency fund">
+          </label>
+
+          <button class="btn btn-primary wide mt-3" type="submit">Save Changes</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- 4. FINANCIAL PREFERENCES -->
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">PREFERENCES</p>
+          <h2>Financial Preferences</h2>
+        </div>
+      </div>
+      <div>
+        <div class="profile-pref-row">
+          <span>Preferred Currency</span>
+          <strong>₹ INR (Indian Rupee)</strong>
+        </div>
+        <div class="profile-pref-row">
+          <span>Monthly Planned Budget</span>
+          <strong>₹{{ '{:,.0f}'.format(metrics.budget_total) }}</strong>
+        </div>
+        <div class="profile-pref-row">
+          <span>Monthly Savings Target</span>
+          <strong>₹{{ '{:,.0f}'.format(current_user.monthly_savings_target or 0) }}</strong>
+        </div>
+        <div class="profile-pref-row">
+          <span>Top Expense Category</span>
+          <strong>{{ metrics.highest_category if metrics.highest_category != 'None' else 'General' }}</strong>
+        </div>
+        <div class="profile-pref-row">
+          <span>Primary Financial Goal</span>
+          <strong>{{ current_user.financial_goal or 'Not specified' }}</strong>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- RIGHT COLUMN: Goals, AI Advisor, App Settings -->
+  <div class="d-flex flex-column gap-3">
+    
+    <!-- 5. GOALS SUMMARY -->
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">SAVINGS TARGETS</p>
+          <h2>My Goals</h2>
+        </div>
+        <a href="{{ url_for('finance.goals') }}">Manage goals →</a>
+      </div>
+
+      {% if goals %}
+        {% for goal in goals %}
+        <div class="report-goal-row mb-3">
+          <div class="report-goal-heading">
+            <div>
+              <strong>{{ goal.name }}</strong>
+              <small class="muted d-block">₹{{ '{:,.0f}'.format(goal.current_amount) }} of ₹{{ '{:,.0f}'.format(goal.target_amount) }}</small>
+            </div>
+            <strong>{{ '{:.1f}'.format(goal.progress) }}%</strong>
+          </div>
+          <div class="progress mt-1"><div style="width:{{ [goal.progress, 100]|min }}%"></div></div>
+          <div class="report-goal-meta mt-1">
+            <span>Remaining: ₹{{ '{:,.0f}'.format(goal.remaining) }}</span>
+            {% if goal.is_achieved %}
+            <span class="text-success">✓ Achieved</span>
+            {% elif goal.target_date %}
+            <span>Target: {{ goal.target_date.strftime('%d %b %Y') }}</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="report-empty">
+          <strong>No active goals yet.</strong>
+          <span>Create a goal in the Goals section to start tracking your progress.</span>
+        </div>
+      {% endif %}
+    </section>
+
+    <!-- 6. AI ADVISOR PREFERENCES -->
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">INTELLIGENCE</p>
+          <h2>AI Advisor Settings</h2>
+        </div>
+      </div>
+      <div>
+        <div class="profile-pref-row">
+          <div>
+            <strong>AI Financial Insights</strong>
+            <p class="muted small mb-0">Deterministic financial analysis backed by AI guidance</p>
+          </div>
+          <span class="badge bg-success text-white px-2 py-1">Enabled</span>
+        </div>
+        <div class="profile-pref-row">
+          <div>
+            <span>Data Privacy & Isolation</span>
+            <p class="muted small mb-0">Your private financial records stay isolated to your account</p>
+          </div>
+          <span class="badge bg-secondary text-white px-2 py-1">Active</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. APPLICATION SETTINGS -->
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">DISPLAY & THEME</p>
+          <h2>App Settings</h2>
+        </div>
+      </div>
+      <div>
+        <div class="profile-pref-row">
+          <div>
+            <strong>Currency Format</strong>
+            <p class="muted small mb-0">Display format for currency throughout the workspace</p>
+          </div>
+          <strong>INR (₹)</strong>
+        </div>
+        <div class="profile-pref-row">
+          <div>
+            <strong>Dark Mode</strong>
+            <p class="muted small mb-0">Toggle dark theme appearance</p>
+          </div>
+          <label class="theme-toggle-switch">
+            <input type="checkbox" id="darkModeControl">
+            <span class="theme-toggle-slider"></span>
+          </label>
+        </div>
+        <div class="profile-pref-row">
+          <div>
+            <span>Notification Preference</span>
+            <p class="muted small mb-0">Important balance and budget alerts</p>
+          </div>
+          <strong>In-App Active</strong>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- 8. FINANCIAL PROFILE SUMMARY -->
+<section class="panel mt-4">
+  <div class="panel-heading">
+    <div>
+      <p class="eyebrow">OVERVIEW</p>
+      <h2>Your Financial Snapshot</h2>
+    </div>
+  </div>
+  <div class="report-grid">
+    <div class="report-fact-list">
+      <div><span>Monthly Income</span><strong>₹{{ '{:,.0f}'.format(metrics.total_income) }}</strong></div>
+      <div><span>Monthly Expenses</span><strong>₹{{ '{:,.0f}'.format(metrics.total_expenses) }}</strong></div>
+      <div><span>Net Savings</span><strong>₹{{ '{:,.0f}'.format(metrics.total_savings) }}</strong></div>
+      <div><span>Savings Rate</span><strong>{{ '{:.1f}'.format(metrics.savings_rate) }}%</strong></div>
+    </div>
+    <div class="d-flex flex-column justify-content-center p-3">
+      <div class="p-3 rounded" style="background: rgba(15, 118, 110, 0.06); border: 1px solid var(--line);">
+        <p class="eyebrow mb-1">CURRENT STATUS</p>
+        {% if metrics.total_savings > 0 %}
+        <h4 class="h6 mb-1 text-success">Your current monthly savings are ₹{{ '{:,.0f}'.format(metrics.total_savings) }}.</h4>
+        <p class="muted small mb-0">You are currently saving {{ '{:.1f}'.format(metrics.savings_rate) }}% of your monthly income.</p>
+        {% elif metrics.total_income > 0 %}
+        <h4 class="h6 mb-1 text-warning">Your current monthly savings are ₹0.</h4>
+        <p class="muted small mb-0">Monthly expenses equal or exceed your recorded income. Check your Budget page to balance spending.</p>
+        {% else %}
+        <h4 class="h6 mb-1">No monthly records recorded yet.</h4>
+        <p class="muted small mb-0">Add your income and expenses to view your dynamic monthly savings summary.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DARK MODE JAVASCRIPT -->
+<script>
+  (function() {
+    const darkToggle = document.getElementById('darkModeControl');
+    if (!darkToggle) return;
+
+    const isDark = localStorage.getItem('paisa_dark_theme') === 'true';
+    darkToggle.checked = isDark;
+
+    darkToggle.addEventListener('change', function() {
+      if (this.checked) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('paisa_dark_theme', 'true');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        document.body.classList.remove('dark-mode');
+        localStorage.setItem('paisa_dark_theme', 'false');
+      }
+    });
+  })();
+</script>
+{% endblock %}

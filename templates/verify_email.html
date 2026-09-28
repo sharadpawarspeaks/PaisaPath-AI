@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Verify your email{% endblock %}
+{% block content %}
+<div class="auth-shell"><div class="auth-card">
+  <a class="brand" href="{{ url_for('main.index') }}"><img src="{{ url_for('static', filename='img/logo.png') }}" alt="PaisaPath AI logo" class="brand-logo"> PaisaPath AI</a>
+  <p class="eyebrow mt-5">SECURE ACCESS</p>
+  <h1>{{ 'Verify your email' if purpose != 'password_reset' else 'Confirm password reset' }}</h1>
+  <p class="muted">We sent a 6-digit code to <strong>{{ email }}</strong>. It expires in {{ config['OTP_EXPIRY_MINUTES'] }} minutes.</p>
+  <form method="post" class="mt-4"><label>Verification code<input name="otp" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required></label><button class="btn btn-primary w-100 mt-3">Verify code</button></form>
+  <form method="post" action="{{ url_for('auth.resend_otp') }}" class="text-center mt-3"><input type="hidden" name="purpose" value="{{ purpose }}"><button class="btn btn-link">Resend code</button></form>
+  {% if purpose != 'password_reset' %}<p class="text-center mt-3"><a href="{{ url_for('auth.login') }}">Return to log in</a></p>{% endif %}
+</div></div>
+{% endblock %}
