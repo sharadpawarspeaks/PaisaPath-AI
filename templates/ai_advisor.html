@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+{% block title %}AI Advisor{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <p class="eyebrow">GROUNDED IN YOUR FINANCIAL DATA</p>
+    <h1>AI Financial Advisor</h1>
+    <p class="muted">Interactive budgeting intelligence and financial guidance tailored to your live numbers.</p>
+  </div>
+</div>
+
+<div class="advisor-layout">
+  <!-- Main Chat Section -->
+  <section class="chat-container panel">
+    <div class="chat-header">
+      <div class="d-flex align-items-center gap-2">
+        <div class="bot-avatar">AI</div>
+        <div>
+          <strong>PaisaPath AI</strong>
+          <small class="d-block text-muted" style="font-size: 0.75rem;">Always grounded in your real incomes, expenses & goals</small>
+        </div>
+      </div>
+      <form action="{{ url_for('ai.clear_history') }}" method="post" onsubmit="return confirm('Clear chat history?');">
+        <button type="submit" class="btn-clear-chat" title="Clear chat history">🗑️ Clear</button>
+      </form>
+    </div>
+
+    <!-- Quick Prompt Pills -->
+    <div class="quick-prompts-wrapper">
+      <small class="quick-prompts-label">SUGGESTIONS:</small>
+      <div class="quick-prompts">
+        <button type="button" class="prompt-pill" data-prompt="Where can I save my money? Analyze my expenses and suggest cuts.">💡 Where can I save money?</button>
+        <button type="button" class="prompt-pill" data-prompt="Analyze my top spending categories and tell me where I am spending the most.">📊 Top spending breakdown</button>
+        <button type="button" class="prompt-pill" data-prompt="Calculate my ideal 50/30/20 budget based on my income and expenses.">⚖️ 50/30/20 Budget Check</button>
+        <button type="button" class="prompt-pill" data-prompt="How can I reach my savings goals faster?">🎯 Accelerate my goals</button>
+        <button type="button" class="prompt-pill" data-prompt="How much should I keep in an emergency fund and how do I build one?">🛡️ Emergency buffer plan</button>
+      </div>
+    </div>
+
+    <!-- Message Thread -->
+    <div class="chat-thread" id="chatThread">
+      {% for msg in chat_history %}
+        {% if msg.role == 'user' %}
+        <div class="chat-bubble user-bubble">
+          <div class="bubble-content">{{ msg.content }}</div>
+        </div>
+        {% else %}
+        <div class="chat-bubble bot-bubble">
+          <div class="bot-meta">
+            <span class="source-tag">{{ msg.source or 'Financial Advisor' }}</span>
+          </div>
+          {% if msg.summary %}
+          <div class="bot-summary-box">
+            <strong>{{ msg.summary }}</strong>
+          </div>
+          {% endif %}
+          <div class="bubble-content markdown-body" data-raw="{{ msg.content or msg.recommendation }}">
+            {{ msg.content or msg.recommendation }}
+          </div>
+          {% if msg.priorities %}
+          <div class="bot-priorities">
+            <small class="priorities-title">ACTIONABLE PRIORITIES:</small>
+            <ul>
+              {% for p in msg.priorities %}
+              <li>{{ p }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+      {% endfor %}
+      <div id="typingIndicator" class="chat-bubble bot-bubble typing-bubble" style="display: none;">
+        <div class="typing-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <small class="text-muted ms-2" style="font-size: 0.8rem;">Analyzing your transactions & cashflow...</small>
+      </div>
+    </div>
+
+    <!-- Chat Input Form -->
+    <form id="chatForm" action="{{ url_for('ai.advisor') }}" method="post" class="chat-input-bar">
+      <textarea id="questionInput" name="question" rows="1" placeholder="Ask anything: 'Where can I save my money?', 'Analyze my rent and food', 'How to budget?'..." required></textarea>
+      <button type="submit" id="sendBtn" class="btn-send" title="Send message">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </form>
+  </section>
+
+  <!-- Sidebar Context Strip -->
+  <aside class="advisor-sidebar">
+    <div class="panel p-3 mb-3">
+      <p class="eyebrow m-0 mb-2">THIS MONTH'S METRICS</p>
+      <div class="advisor-stat">
+        <span>Income</span>
+        <strong>₹{{ '{:,.0f}'.format(metrics.total_income) }}</strong>
+      </div>
+      <div class="advisor-stat">
+        <span>Expenses</span>
+        <strong>₹{{ '{:,.0f}'.format(metrics.total_expenses) }}</strong>
+      </div>
+      <div class="advisor-stat">
+        <span>Savings Rate</span>
+        <strong>{{ metrics.savings_rate }}%</strong>
+      </div>
+      <div class="advisor-stat">
+        <span>Top Category</span>
+        <strong>{{ metrics.highest_category }}</strong>
+      </div>
+    </div>
+
+    <div class="panel p-3 mb-3">
+      <p class="eyebrow m-0 mb-2">SPENDING BREAKDOWN</p>
+      {% for cat, amt in metrics.category_expenses.items() %}
+      <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.84rem;">
+        <span class="text-muted">{{ cat }}</span>
+        <strong style="font-family: 'DM Mono', monospace;">₹{{ '{:,.0f}'.format(amt) }}</strong>
+      </div>
+      {% else %}
+      <p class="text-muted small m-0">No expenses recorded yet.</p>
+      {% endfor %}
+    </div>
+
+    <div class="panel p-3">
+      <p class="eyebrow m-0 mb-2">USER CONTEXT</p>
+      <div style="font-size: 0.84rem;" class="text-muted">
+        <div><strong>Type:</strong> {{ current_user.user_type }}</div>
+        {% if current_user.monthly_savings_target %}
+        <div><strong>Savings Target:</strong> ₹{{ '{:,.0f}'.format(current_user.monthly_savings_target) }}</div>
+        {% endif %}
+        {% if current_user.financial_goal %}
+        <div class="mt-1"><strong>Goal:</strong> {{ current_user.financial_goal }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </aside>
+</div>
+
+<p class="disclaimer mt-4">
+  This application provides educational budgeting insights and algorithmic financial analysis. It is not a substitute for certified financial or tax advice.
+</p>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const thread = document.getElementById('chatThread');
+    const form = document.getElementById('chatForm');
+    const input = document.getElementById('questionInput');
+    const typing = document.getElementById('typingIndicator');
+    // Auto parse markdown on existing bubbles
+    if (typeof marked !== 'undefined') {
+      document.querySelectorAll('.markdown-body').forEach(el => {
+        const raw = el.getAttribute('data-raw') || el.textContent;
+        el.innerHTML = marked.parse(raw);
+      });
+    }
+
+    // Scroll to bottom
+    function scrollToBottom() {
+      thread.scrollTop = thread.scrollHeight;
+    }
+    scrollToBottom();
+
+    // Auto-expand textarea on typing
+    input.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+
+    // Enter to submit (Shift+Enter for newline)
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (this.value.trim()) {
+          form.dispatchEvent(new Event('submit', { cancelable: true }));
+        }
+      }
+    });
+
+    // Quick prompt pills
+    document.querySelectorAll('.prompt-pill').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const text = this.getAttribute('data-prompt');
+        input.value = text;
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+        form.dispatchEvent(new Event('submit', { cancelable: true }));
+      });
+    });
+
+    // AJAX Form Submission for seamless instant chat
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const question = input.value.trim();
+      if (!question) return;
+
+      // 1. Append user bubble
+      const userBubble = document.createElement('div');
+      userBubble.className = 'chat-bubble user-bubble';
+      userBubble.innerHTML = `<div class="bubble-content">${escapeHtml(question)}</div>`;
+      thread.insertBefore(userBubble, typing);
+      
+      input.value = '';
+      input.style.height = 'auto';
+      typing.style.display = 'flex';
+      scrollToBottom();
+
+      try {
+        const resp = await fetch('{{ url_for("ai.chat_api") }}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ question: question })
+        });
+
+        const data = await resp.json();
+        typing.style.display = 'none';
+
+        if (data && data.answer) {
+          const ans = data.answer;
+          const botBubble = document.createElement('div');
+          botBubble.className = 'chat-bubble bot-bubble';
+          
+          let html = `
+            <div class="bot-meta">
+              <span class="source-tag">${escapeHtml(ans.source || 'Intelligent Financial Advisor Engine')}</span>
+            </div>
+          `;
+
+          if (ans.summary) {
+            html += `
+              <div class="bot-summary-box">
+                <strong>${escapeHtml(ans.summary)}</strong>
+              </div>
+            `;
+          }
+
+          const rawReply = ans.reply || ans.recommendation || '';
+          const parsedContent = (typeof marked !== 'undefined') ? marked.parse(rawReply) : escapeHtml(rawReply);
+          html += `<div class="bubble-content markdown-body">${parsedContent}</div>`;
+
+          if (ans.priorities && ans.priorities.length > 0) {
+            html += `
+              <div class="bot-priorities">
+                <small class="priorities-title">ACTIONABLE PRIORITIES:</small>
+                <ul>
+                  ${ans.priorities.map(p => `<li>${escapeHtml(p)}</li>`).join('')}
+                </ul>
+              </div>
+            `;
+          }
+
+          botBubble.innerHTML = html;
+          thread.insertBefore(botBubble, typing);
+        } else {
+          throw new Error('Invalid response structure');
+        }
+      } catch (err) {
+        typing.style.display = 'none';
+        const errBubble = document.createElement('div');
+        errBubble.className = 'chat-bubble bot-bubble';
+        errBubble.innerHTML = `
+          <div class="bubble-content text-danger">
+            ⚠️ Unable to retrieve financial analysis. Please try again.
+          </div>
+        `;
+        thread.insertBefore(errBubble, typing);
+      }
+
+      scrollToBottom();
+    });
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+  });
+</script>
+{% endblock %}

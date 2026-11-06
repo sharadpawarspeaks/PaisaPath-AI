@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}{% if mode == 'login' %}Log in{% elif mode == 'register' %}Create account{% elif mode == 'forgot_password' %}Forgot password{% else %}Reset password{% endif %}{% endblock %}
+{% block content %}
+<div class="auth-shell">
+  <div class="auth-card">
+    <a class="brand" href="{{ url_for('main.index') }}"><img src="{{ url_for('static', filename='img/logo.png') }}" alt="PaisaPath AI logo" class="brand-logo"> PaisaPath AI</a>
+    {% if mode == 'login' %}
+      <p class="eyebrow mt-5">WELCOME BACK</p><h1>Log in to your workspace</h1><p class="muted">Your dashboard is ready when you are.</p>
+      <form method="post" class="mt-4"><label>Email<input type="email" name="email" autocomplete="email" required></label><label>Password<input type="password" name="password" autocomplete="current-password" minlength="8" required></label><button class="btn btn-primary w-100 mt-3">Log in</button></form>
+      <p class="text-center mt-3"><a href="{{ url_for('auth.forgot_password') }}">Forgot password?</a></p><p class="text-center mt-4">New here? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
+    {% elif mode == 'register' %}
+      <p class="eyebrow mt-5">YOUR MONEY, ORGANIZED</p><h1>Build your financial baseline</h1><p class="muted">Create a private workspace for your everyday finances.</p>
+      <form method="post" class="mt-4"><label>Full name<input name="name" autocomplete="name" required></label><label>Email<input type="email" name="email" autocomplete="email" required></label><label>Password<input type="password" name="password" autocomplete="new-password" minlength="8" required><small class="muted">Use at least 8 characters.</small></label><label>Confirm password<input type="password" name="confirm_password" autocomplete="new-password" minlength="8" required></label><label>User type<select name="user_type"><option>Student</option><option>Salaried Professional</option><option>Freelancer</option><option>Household Manager</option></select></label><button class="btn btn-primary w-100 mt-3">Create account</button></form>
+      <p class="text-center mt-4">Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a></p>
+    {% elif mode == 'forgot_password' %}
+      <p class="eyebrow mt-5">ACCOUNT RECOVERY</p><h1>Reset your password</h1><p class="muted">Enter your email address to reset your password.</p>
+      <form method="post" class="mt-4"><label>Email<input type="email" name="email" autocomplete="email" required></label><button class="btn btn-primary w-100 mt-3">Continue to reset password</button></form><p class="text-center mt-4"><a href="{{ url_for('auth.login') }}">Back to log in</a></p>
+    {% else %}
+      <p class="eyebrow mt-5">NEW PASSWORD</p><h1>Choose a new password</h1><p class="muted">Use at least 8 characters, then log in with your new password.</p>
+      <form method="post" class="mt-4"><label>New password<input type="password" name="password" autocomplete="new-password" minlength="8" required></label><label>Confirm password<input type="password" name="confirm_password" autocomplete="new-password" minlength="8" required></label><button class="btn btn-primary w-100 mt-3">Update password</button></form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

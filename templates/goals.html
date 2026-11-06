@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}Goals{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <p class="eyebrow">FUTURE YOU, MADE VISIBLE</p>
+    <h1>Savings goals</h1>
+    <p class="muted">Track target dates, milestones, and exact monthly savings needed to reach your dreams.</p>
+  </div>
+</div>
+
+<div class="grid-2">
+  <section class="panel">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">NEW MILESTONE</p>
+        <h2>Create a goal</h2>
+      </div>
+    </div>
+    <form method="post" class="form-grid">
+      <label>Goal name
+        <input name="name" placeholder="e.g. Flat in Ecocity, Car, Emergency Fund" required>
+      </label>
+      <label>Target amount (₹)
+        <input type="number" name="target_amount" min="1" step="0.01" placeholder="e.g. 2500000" required>
+      </label>
+      <label>Already saved (₹)
+        <input type="number" name="current_amount" min="0" step="0.01" value="0" placeholder="0">
+      </label>
+      <label>Target date
+        <input type="date" name="target_date" id="targetDateInput">
+      </label>
+      <label class="wide">Description / Notes
+        <input name="description" placeholder="e.g. 2 BHK Flat at Ecocity, down payment target">
+      </label>
+      <button class="btn btn-primary wide">Create goal</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <p class="eyebrow">EDUCATIONAL INDICATOR</p>
+    <h2>Planning with Target Dates</h2>
+    <p class="muted mb-3">
+      Setting a realistic <strong>Target Date</strong> lets PaisaPath AI calculate the exact monthly savings you need to put away.
+    </p>
+    <div class="recommendation mb-3">
+      💡 <strong>Smart AI Tip:</strong> When chatting in the <strong>AI Advisor</strong> tab, the advisor factors in your target dates and suggests exact expense cuts to fund your monthly goal targets.
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a href="{{ url_for('ai.advisor') }}" class="chat-link-btn">Ask AI about your goals →</a>
+    </div>
+  </section>
+</div>
+
+<section class="goal-list mt-4">
+  {% for goal in goals %}
+  {% set calculation = goal_calculation_map[goal.id] %}
+  <article class="panel goal-card">
+    <div>
+      <div class="goal-card-header">
+        <div>
+          <h2>{{ goal.name }}</h2>
+          <p class="muted m-0" style="font-size:0.85rem;">{{ goal.description or 'Keep moving at your own pace.' }}</p>
+          <div class="goal-badges">
+            {% if calculation.target_date %}
+            <span class="goal-badge goal-badge-date">
+              📅 Target: {{ calculation.target_date.strftime('%d %b %Y') }}
+            </span>
+            {% if calculation.remaining_months is not none and calculation.remaining_months > 0 %}
+            <span class="goal-badge goal-badge-active">
+              ⏳ {{ calculation.remaining_days }} days left
+            </span>
+            {% elif calculation.remaining_days == 0 %}
+            <span class="goal-badge goal-badge-active" style="background:#fef3c7; color:#b45309; border-color:#fde68a;">
+              ⚠️ Due this month
+            </span>
+            {% endif %}
+            {% else %}
+            <span class="goal-badge goal-badge-date">📅 Ongoing (No date set)</span>
+            {% endif %}
+
+            {% if calculation.goal_status == 'Completed' %}
+            <span class="goal-badge goal-badge-achieved">🎉 Target Achieved</span>
+            {% endif %}
+          </div>
+        </div>
+        <form method="post" action="{{ url_for('finance.delete_goal', goal_id=goal.id) }}" onsubmit="return confirm('Remove goal \'{{ goal.name }}\'?');">
+          <button class="icon-btn" title="Delete goal">×</button>
+        </form>
+      </div>
+
+      <!-- Highlighted Monthly Target Box -->
+      <div class="goal-monthly-target-box {% if calculation.goal_status == 'Completed' %}completed{% endif %}">
+        <div class="goal-target-left">
+          <div class="goal-target-icon">{% if calculation.goal_status == 'Completed' %}🏆{% else %}🎯{% endif %}</div>
+          <div>
+            <span class="goal-target-label">
+              {% if calculation.goal_status == 'Completed' %}GOAL REACHED{% else %}REQUIRED MONTHLY SAVINGS{% endif %}
+            </span>
+            <div class="goal-target-val">
+              {% if calculation.goal_status == 'Completed' %}
+                100% Completed
+              {% elif calculation.target_date and calculation.monthly_required is not none %}
+                ₹{{ '{:,.0f}'.format(calculation.monthly_required) }} <span>/ month</span>
+              {% else %}
+                {% if calculation.projected_completion_date %}{{ calculation.estimated_months_to_goal }} <span>months estimated</span>{% else %}Add expenses to estimate{% endif %}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="goal-target-right">
+          {% if calculation.goal_status == 'Completed' %}
+            <strong>Fully Funded</strong>
+            <span>Great milestone!</span>
+          {% elif calculation.target_date %}
+            <strong>{{ calculation.target_date.strftime('%b %Y') }}</strong>
+            <span>target timeline</span>
+          {% else %}
+            <span>Set target date</span>
+          {% endif %}
+        </div>
+      </div>
+      {% if calculation.salary_increment_percentage > 0 %}
+      <p class="muted" style="font-size:0.85rem; margin-top:0.75rem;">Applicable salary: <strong>₹{{ '{:,.0f}'.format(calculation.applicable_salary) }}/month</strong>. {% if calculation.salary_increment_affects_goal %}Next salary: ₹{{ '{:,.0f}'.format(calculation.next_salary) }}/month.{% else %}{{ calculation.salary_explanation }}{% endif %}</p>
+      {% endif %}
+      <p class="muted" style="font-size:0.85rem; margin-top:0.5rem;">Available for goals: <strong>₹{{ '{:,.0f}'.format(calculation.available_goal_contribution) }}/month</strong> · {{ calculation.feasibility_label }}</p>
+      {% if not calculation.target_date and calculation.projected_completion_date %}<p class="muted" style="font-size:0.85rem;">Estimated completion: <strong>{{ calculation.projected_completion_date.strftime('%d %b %Y') }}</strong> ({{ calculation.estimated_months_to_goal }} months)</p>{% endif %}
+
+      <div class="d-flex justify-content-between align-items-baseline mt-2 mb-1">
+        <span class="big-number" style="font-size: 2rem;">{{ calculation.progress_percentage }}%</span>
+        <span class="muted" style="font-size: 0.85rem; font-weight: 600;">
+          ₹{{ '{:,.0f}'.format(calculation.amount_saved) }} saved · ₹{{ '{:,.0f}'.format(calculation.remaining_amount) }} left
+        </span>
+      </div>
+
+      <a class="btn btn-outline-dark btn-sm mt-3" href="{{ url_for('finance.goal_detail', goal_id=goal.id) }}">View goal details</a>
+
+      <div class="progress">
+        <div style="width:{{ calculation.progress_percentage }}%"></div>
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('finance.contribute', goal_id=goal.id) }}" class="contribute">
+      <input type="number" min="1" step="0.01" name="amount" placeholder="Contribution (₹)" required>
+      <button class="btn btn-dark">Add money</button>
+    </form>
+  </article>
+  {% else %}
+  <div class="panel empty" style="grid-column: 1 / -1;">
+    <h3>No goals created yet</h3>
+    <p class="muted mb-3">Create a savings goal with a target amount and target date to see automated monthly savings roadmaps.</p>
+  </div>
+  {% endfor %}
+</section>
+{% endblock %}

@@ -1,0 +1,633 @@
+{% extends 'base.html' %}
+{% block title %}Financial Snapshot{% endblock %}
+{% block content %}
+<div class="snapshot-container">
+  <!-- Top Header Bar -->
+  <header class="snapshot-header">
+    <div class="snapshot-header-left">
+      <h1 class="snapshot-page-title">Financial Snapshot</h1>
+      <p class="snapshot-greeting">Welcome back, <strong>{{ current_user.name }}</strong> · Here is your financial overview.</p>
+    </div>
+    
+    <div class="snapshot-header-right">
+      <form method="get" class="snapshot-period-form">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        <select name="preset" onchange="this.form.submit()">
+          <option value="this_month" {% if preset == 'this_month' %}selected{% endif %}>This Month</option>
+          <option value="last_month" {% if preset == 'last_month' %}selected{% endif %}>Last Month</option>
+          <option value="last_3_months" {% if preset == 'last_3_months' %}selected{% endif %}>Last 3 Months</option>
+          <option value="last_6_months" {% if preset == 'last_6_months' %}selected{% endif %}>Last 6 Months</option>
+          <option value="this_year" {% if preset == 'this_year' %}selected{% endif %}>This Year</option>
+        </select>
+      </form>
+      <a href="{{ url_for('main.profile') }}" class="btn btn-outline-dark btn-sm d-flex align-items-center gap-1" title="Profile Settings">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        <span>Profile</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- 4.1: Financial Summary Cards (Row of 4 on Desktop) -->
+  <section class="summary-cards-row">
+    <!-- Card 1: Total Income -->
+    <div class="fin-card summary-card">
+      <div class="summary-card-head">
+        <span class="card-label">Total Income</span>
+        <div class="card-icon-pill icon-income" title="Income">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+        </div>
+      </div>
+      <div class="card-amount">₹{{ '{:,.2f}'.format(metrics.total_income) }}</div>
+      <div class="card-footer-info">
+        {% if analytics.comparison.income.percent is not none %}
+          <span class="trend-badge {% if analytics.comparison.income.percent >= 0 %}trend-positive{% else %}trend-negative{% endif %}">
+            {% if analytics.comparison.income.percent >= 0 %}↗ +{% else %}↘ {% endif %}{{ '{:.1f}'.format(analytics.comparison.income.percent) }}%
+          </span>
+          <span class="muted text-xs">vs last period</span>
+        {% else %}
+          <span class="trend-badge trend-neutral">Active</span>
+          <span class="muted text-xs">Total Balance: ₹{{ '{:,.0f}'.format(metrics.total_savings if metrics.total_savings > 0 else metrics.total_income) }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Card 2: Total Expenses -->
+    <div class="fin-card summary-card">
+      <div class="summary-card-head">
+        <span class="card-label">Total Expenses</span>
+        <div class="card-icon-pill icon-expense" title="Expenses">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline></svg>
+        </div>
+      </div>
+      <div class="card-amount">₹{{ '{:,.2f}'.format(metrics.total_expenses) }}</div>
+      <div class="card-footer-info">
+        {% if analytics.comparison.expenses.percent is not none %}
+          {# Increase in expenses is flagged as warning/coral, reduction is positive/green #}
+          <span class="trend-badge {% if analytics.comparison.expenses.percent > 0 %}trend-coral{% else %}trend-positive{% endif %}">
+            {% if analytics.comparison.expenses.percent > 0 %}↗ +{% else %}↘ {% endif %}{{ '{:.1f}'.format(analytics.comparison.expenses.percent) }}%
+          </span>
+          <span class="muted text-xs">vs last period</span>
+        {% else %}
+          <span class="trend-badge trend-neutral">Tracked</span>
+          <span class="muted text-xs">Bills & daily spend</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Card 3: Net Savings -->
+    <div class="fin-card summary-card">
+      <div class="summary-card-head">
+        <span class="card-label">Net Savings</span>
+        <div class="card-icon-pill icon-savings" title="Net Savings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2z"></path><path d="M12 7v10"></path><path d="M7 12h10"></path></svg>
+        </div>
+      </div>
+      <div class="card-amount {% if metrics.total_savings >= 0 %}text-emerald{% else %}text-coral{% endif %}">
+        ₹{{ '{:,.2f}'.format(metrics.total_savings) }}
+      </div>
+      <div class="card-footer-info">
+        {% if metrics.total_savings >= 0 %}
+          <span class="trend-badge trend-positive">+Saved</span>
+          <span class="muted text-xs">Income surplus</span>
+        {% else %}
+          <span class="trend-badge trend-coral">Deficit</span>
+          <span class="muted text-xs">Spend exceeded</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Card 4: Savings Rate -->
+    <div class="fin-card summary-card">
+      <div class="summary-card-head">
+        <span class="card-label">Savings Rate</span>
+        <div class="card-icon-pill icon-rate" title="Savings Rate">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="m4.93 4.93 14.14 14.14"></path></svg>
+        </div>
+      </div>
+      <div class="card-amount">{{ '{:.1f}'.format(metrics.savings_rate) }}%</div>
+      <div class="card-footer-info">
+        <span class="trend-badge {% if metrics.savings_rate >= 20 %}trend-positive{% elif metrics.savings_rate > 0 %}trend-warning{% else %}trend-coral{% endif %}">
+          {% if metrics.savings_rate >= 20 %}Healthy{% elif metrics.savings_rate > 0 %}Moderate{% else %}Low{% endif %}
+        </span>
+        <span class="muted text-xs">{{ '{:.1f}'.format(metrics.savings_rate) }}% of income saved</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4.2: Main Analytics Section (Two Columns) -->
+  <section class="analytics-row-2col">
+    <!-- Left: Large Income vs Expenses Chart -->
+    <div class="fin-card chart-card-large">
+      <div class="card-head-clean">
+        <div>
+          <h2 class="card-title">Income vs Expenses</h2>
+          <p class="card-subtitle muted">Monthly Trend · Cash Flow over time</p>
+        </div>
+        <div class="chart-legend-box">
+          <span class="legend-item"><span class="legend-dot dot-income"></span> Income</span>
+          <span class="legend-item"><span class="legend-dot dot-expense"></span> Expenses</span>
+        </div>
+      </div>
+      <div class="chart-container-large">
+        <canvas id="incomeExpensesChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Right: Expense Breakdown Donut Card -->
+    <div class="fin-card chart-card-donut">
+      <div class="card-head-clean">
+        <div>
+          <h2 class="card-title">Expense Breakdown</h2>
+          <p class="card-subtitle muted">Spending by Category for this period</p>
+        </div>
+      </div>
+      {% if analytics.category_breakdown %}
+      <div class="donut-chart-container">
+        <canvas id="expenseDonutChart"></canvas>
+      </div>
+      <div class="category-breakdown-list">
+        {% for cat in analytics.category_breakdown %}
+        <div class="cat-row">
+          <div class="cat-info">
+            <span class="cat-dot" style="background-color: var(--donut-cat-{{ loop.index0 % 7 }});"></span>
+            <span class="cat-name">{{ cat.category }}</span>
+          </div>
+          <div class="cat-values">
+            <span class="cat-amt">₹{{ '{:,.0f}'.format(cat.amount) }}</span>
+            <span class="cat-pct">{{ '{:.1f}'.format(cat.percentage) }}%</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state-card">
+        <p class="muted">No expenses recorded for this period.</p>
+        <a href="{{ url_for('finance.expenses') }}" class="btn btn-primary btn-sm">+ Add Expense</a>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- 4.3: Secondary Analytics Section (Two Columns) -->
+  <section class="analytics-row-2col">
+    <!-- Left: Monthly Savings Trend -->
+    <div class="fin-card chart-card-savings">
+      <div class="card-head-clean">
+        <div>
+          <h2 class="card-title">Monthly Savings Trend</h2>
+          <p class="card-subtitle muted">Savings Trend accumulated across historical periods</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="muted text-xs">Total Savings:</span>
+          <strong class="{% if metrics.total_savings >= 0 %}text-emerald{% else %}text-coral{% endif %} font-monospace">₹{{ '{:,.0f}'.format(metrics.total_savings) }}</strong>
+          {% if analytics.comparison.savings.percent is not none %}
+          <span class="trend-badge {% if analytics.comparison.savings.amount >= 0 %}trend-positive{% else %}trend-coral{% endif %}">
+            {% if analytics.comparison.savings.amount >= 0 %}↗ +{% else %}↘ {% endif %}{{ '{:.1f}'.format(analytics.comparison.savings.percent) }}%
+          </span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="chart-container-savings">
+        <canvas id="savingsTrendChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Right: Budget Utilisation -->
+    <div class="fin-card budget-card-widget">
+      <div class="card-head-clean">
+        <div>
+          <h2 class="card-title">Budget Utilisation</h2>
+          <p class="card-subtitle muted">Spending vs planned limits</p>
+        </div>
+        <a href="{{ url_for('finance.budget') }}" class="card-action-link">Manage Budget →</a>
+      </div>
+      {% if analytics.budget_data_available %}
+      <div class="budget-items-list">
+        {% for b in analytics.budget_vs_actual[:4] %}
+        {% set pct = (b.actual / b.budget * 100) if b.budget > 0 else 0 %}
+        <div class="budget-widget-item">
+          <div class="budget-item-top">
+            <span class="budget-cat-name">{{ b.category }}</span>
+            <span class="budget-cat-values">
+              <strong>₹{{ '{:,.0f}'.format(b.actual) }}</strong> <span class="muted">/ ₹{{ '{:,.0f}'.format(b.budget) }}</span>
+            </span>
+          </div>
+          <div class="budget-progress-track">
+            <div class="budget-progress-bar {% if pct > 100 %}bar-exceeded{% elif pct > 85 %}bar-warning{% else %}bar-normal{% endif %}" style="width: {{ [pct, 100]|min }}%;"></div>
+          </div>
+          <div class="budget-item-bottom d-flex justify-content-between">
+            {% if b.over > 0 %}
+              <span class="text-coral text-xs">⚠ Over budget by ₹{{ '{:,.0f}'.format(b.over) }}</span>
+            {% elif pct > 85 %}
+              <span class="text-amber text-xs">Approaching limit ({{ '{:.0f}'.format(pct) }}%)</span>
+            {% else %}
+              <span class="muted text-xs">₹{{ '{:,.0f}'.format(b.budget - b.actual) }} remaining</span>
+            {% endif %}
+            <span class="muted text-xs">{{ '{:.0f}'.format(pct) }}% used</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state-card">
+        <p class="muted">No budget set for this period.</p>
+        <a href="{{ url_for('finance.budget') }}" class="btn btn-outline-dark btn-sm">Set Budget</a>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- 4.4: Bottom Section: Recent Transactions + Goals + AI Insights -->
+  <section class="dashboard-bottom-grid">
+    <!-- Left: Recent Transactions -->
+    <div class="fin-card recent-tx-widget">
+      <div class="card-head-clean">
+        <div>
+          <h2 class="card-title">Recent Transactions</h2>
+          <p class="card-subtitle muted">Latest recorded incomes and expenses</p>
+        </div>
+        <a href="{{ url_for('finance.expenses') }}" class="card-action-link">View All →</a>
+      </div>
+
+      {% if recent_transactions %}
+      <div class="mb-3">
+        <input type="text" class="form-control form-control-sm" id="txQuickFilter" placeholder="Search transactions..." onkeyup="filterTx(this.value)">
+      </div>
+      <div class="recent-tx-list" id="txRowsList">
+        {% for tx in recent_transactions[:6] %}
+        <div class="tx-row" data-search="{{ tx.description|lower }} {{ tx.category|lower }}">
+          <div class="d-flex align-items-center">
+            <div class="tx-badge-icon {% if tx.type == 'income' %}badge-income-icon{% else %}badge-expense-icon{% endif %}">
+              {% if tx.type == 'income' %}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline></svg>
+              {% else %}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline></svg>
+              {% endif %}
+            </div>
+            <div class="tx-main-info">
+              <strong class="tx-desc-text">{{ tx.description }}</strong>
+              <span class="tx-meta-text">{{ tx.date.strftime('%d %b %Y') }} · <span class="tag-cat">{{ tx.category }}</span> · {{ tx.payment_method }}</span>
+            </div>
+          </div>
+          <div class="tx-amount-col">
+            <span class="tx-amount-val {% if tx.type == 'income' %}text-emerald{% else %}text-coral{% endif %}">
+              {% if tx.type == 'income' %}+{% else %}-{% endif %}₹{{ '{:,.2f}'.format(tx.amount) }}
+            </span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state-card">
+        <p class="muted">No transactions recorded yet.</p>
+        <div class="d-flex gap-2 justify-content-center mt-2">
+          <a href="{{ url_for('finance.income') }}" class="btn btn-outline-dark btn-sm">+ Add Income</a>
+          <a href="{{ url_for('finance.expenses') }}" class="btn btn-primary btn-sm">+ Add Expense</a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Right: Goals + AI Insight + Health -->
+    <div class="bottom-right-column">
+      <!-- Financial Goals -->
+      <div class="fin-card goals-widget">
+        <div class="card-head-clean">
+          <div>
+            <h2 class="card-title">Financial Goals</h2>
+            <p class="card-subtitle muted">Savings progress towards targets</p>
+          </div>
+          <a href="{{ url_for('finance.goals') }}" class="card-action-link">Manage Goals →</a>
+        </div>
+        {% if analytics.goals %}
+        <div class="goals-widget-list">
+          {% for g in analytics.goals[:2] %}
+          <div class="goal-widget-item">
+            <div class="goal-item-header">
+              <span class="goal-title">{{ g.goal_name }}</span>
+              <strong class="goal-pct">{{ '{:.0f}'.format(g.progress_percentage) }}%</strong>
+            </div>
+            <div class="goal-progress-track">
+              <div class="goal-progress-bar" style="width: {{ [g.progress_percentage, 100]|min }}%;"></div>
+            </div>
+            <div class="goal-item-footer">
+              <span class="muted text-xs">Saved: ₹{{ '{:,.0f}'.format(g.amount_saved) }} / ₹{{ '{:,.0f}'.format(g.goal_amount) }}</span>
+              <span class="muted text-xs">Remaining: ₹{{ '{:,.0f}'.format(g.remaining_amount) }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state-card">
+          <p class="muted">No active goals yet. Set a target to start tracking.</p>
+          <a href="{{ url_for('finance.goals') }}" class="btn btn-outline-dark btn-sm">+ Create Goal</a>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- AI Financial Insight -->
+      <div class="fin-card ai-insight-card">
+        <div class="card-head-clean">
+          <div class="d-flex align-items-center gap-2">
+            <div class="ai-sparkle-dot">✨</div>
+            <div>
+              <h2 class="card-title">AI Financial Insight</h2>
+              <p class="card-subtitle muted">Grounded in your financial data</p>
+            </div>
+          </div>
+          <a href="{{ url_for('ai.advisor') }}" class="card-action-link">Open Advisor →</a>
+        </div>
+        <div class="ai-insight-content">
+          {% if ai_insight %}
+            <p class="ai-insight-paragraph">{{ ai_insight.reply or ai_insight.recommendation or ai_insight.summary }}</p>
+            {% if ai_insight.priorities %}
+            <ul class="ai-tips-list">
+              {% for p in ai_insight.priorities[:2] %}
+              <li>{{ p }}</li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+          {% else %}
+            <p class="ai-insight-paragraph">
+              {% if metrics.total_income > 0 %}
+                At your current savings rate of <strong>{{ '{:.1f}'.format(metrics.savings_rate) }}%</strong>, you are building positive financial headroom. Consider allocating surplus towards your high-priority goals.
+              {% else %}
+                Record your regular income and expenses to unlock tailored AI insights on savings optimizations and budget cuts.
+              {% endif %}
+            </p>
+          {% endif %}
+        </div>
+        <a href="{{ url_for('ai.advisor') }}" class="btn btn-outline-dark btn-sm w-100 mt-2">Open AI Advisor</a>
+      </div>
+
+      <!-- Your Financial Health -->
+      <div class="fin-card health-summary-card">
+        <div class="card-head-clean">
+          <div>
+            <h2 class="card-title">Your Financial Health</h2>
+            <p class="card-subtitle muted">Data-driven summary</p>
+          </div>
+          <span class="trend-badge {% if metrics.savings_rate >= 20 and metrics.total_income > 0 %}trend-positive{% else %}trend-warning{% endif %}">
+            {{ (metrics.savings_rate >= 20 and metrics.total_income > 0) and 'Healthy' or 'Review Spending' }}
+          </span>
+        </div>
+        <ul class="health-checklist">
+          {% if metrics.total_income > 0 or metrics.total_expenses > 0 %}
+            {% if metrics.total_income >= metrics.total_expenses %}
+              <li><span class="check-icon">✓</span> Spending <strong>less than earning</strong> (₹{{ '{:,.0f}'.format(metrics.total_savings) }} saved).</li>
+            {% else %}
+              <li><span class="warn-icon">!</span> Spending <strong>more than earning</strong> (₹{{ '{:,.0f}'.format(metrics.total_expenses - metrics.total_income) }} deficit).</li>
+            {% endif %}
+            {% if metrics.highest_category and metrics.highest_category != 'None' %}
+              <li><span class="check-icon">✓</span> <strong>{{ metrics.highest_category }}</strong> is top expense (₹{{ '{:,.0f}'.format(metrics.category_expenses.get(metrics.highest_category, 0)) }}).</li>
+            {% endif %}
+            <li><span class="check-icon">✓</span> <strong>{{ '{:.1f}'.format(metrics.savings_rate) }}%</strong> of income saved this period.</li>
+            {% if analytics.comparison.expenses.percent is not none %}
+              {% if analytics.comparison.expenses.percent > 0 %}
+                <li><span class="warn-icon">!</span> Spending <strong>increased by {{ '{:.1f}'.format(analytics.comparison.expenses.percent) }}%</strong> vs prior period.</li>
+              {% else %}
+                <li><span class="check-icon">✓</span> Spending <strong>decreased by {{ '{:.1f}'.format(analytics.comparison.expenses.percent|abs) }}%</strong> vs prior period.</li>
+              {% endif %}
+            {% endif %}
+            {% if analytics.active_goals %}
+              <li><span class="check-icon">✓</span> Goal progress on <strong>{{ analytics.active_goal_count }} goal{% if analytics.active_goal_count != 1 %}s{% endif %}</strong> ({{ '{:.0f}'.format(analytics.active_goals[0].progress_percentage) }}% of {{ analytics.active_goals[0].goal_name }}).</li>
+            {% endif %}
+          {% else %}
+            <li class="muted">Add income and expense records to unlock your financial health summary.</li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  // Client-side quick filter for recent transactions
+  function filterTx(query) {
+    const q = (query || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('#txRowsList .tx-row');
+    rows.forEach(r => {
+      const s = r.getAttribute('data-search') || '';
+      r.style.display = s.includes(q) ? 'flex' : 'none';
+    });
+  }
+
+  // Currency formatter
+  const fmtInr = v => '₹' + Number(v || 0).toLocaleString('en-IN');
+
+  // Month label helper (e.g. "2026-10" -> "Oct 26")
+  const formatMonthLabel = str => {
+    if (!str || !str.includes('-')) return str;
+    const parts = str.split('-');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const idx = parseInt(parts[1], 10) - 1;
+    return (months[idx] || parts[1]) + ' ' + parts[0].slice(2);
+  };
+
+  // Trend data for multi-month line graph
+  const trendData = {{ (trend_data or analytics.trend)|tojson }};
+
+  // Chart 1: Income vs Expenses (Large Line Graph)
+  const ieCanvas = document.getElementById('incomeExpensesChart');
+  if (ieCanvas && trendData && trendData.length) {
+    const labels = trendData.map(d => formatMonthLabel(d.label));
+    const incomeVals = trendData.map(d => d.income);
+    const expenseVals = trendData.map(d => d.expenses);
+
+    new Chart(ieCanvas, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Income',
+            data: incomeVals,
+            borderColor: '#059669', // Emerald green
+            backgroundColor: 'rgba(5, 150, 105, 0.08)',
+            borderWidth: 2.5,
+            pointBackgroundColor: '#059669',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            pointRadius: 4.5,
+            pointHoverRadius: 7,
+            fill: true,
+            tension: 0.35
+          },
+          {
+            label: 'Expenses',
+            data: expenseVals,
+            borderColor: '#E76F51', // Muted coral
+            backgroundColor: 'rgba(231, 111, 81, 0.08)',
+            borderWidth: 2.5,
+            pointBackgroundColor: '#E76F51',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            pointRadius: 4.5,
+            pointHoverRadius: 7,
+            fill: true,
+            tension: 0.35
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0B1B36',
+            titleColor: '#F8FAFC',
+            bodyColor: '#F8FAFC',
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: ctx => ' ' + ctx.dataset.label + ': ' + fmtInr(ctx.raw)
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: '#64748B', font: { size: 11, weight: '600' } }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: '#E5E7EB' },
+            ticks: { callback: fmtInr, color: '#64748B', font: { size: 11 } }
+          }
+        }
+      }
+    });
+  }
+
+  // Plugin to render percentage inside each colored circle segment of the Donut chart
+  const donutPercentagePlugin = {
+    id: 'donutPercentagePlugin',
+    afterDraw(chart) {
+      if (chart.config.type !== 'doughnut') return;
+      const { ctx } = chart;
+      const meta = chart.getDatasetMeta(0);
+      if (!meta || !meta.data || !meta.data.length) return;
+      const dataset = chart.data.datasets[0];
+      const total = dataset.data.reduce((a, b) => a + Number(b || 0), 0);
+      if (!total) return;
+
+      ctx.save();
+      meta.data.forEach((element, index) => {
+        const value = Number(dataset.data[index] || 0);
+        const percentage = (value / total) * 100;
+        if (percentage < 3) return; // skip if segment is too thin
+
+        const { startAngle, endAngle, innerRadius, outerRadius, x, y } = element;
+        const midAngle = startAngle + (endAngle - startAngle) / 2;
+        const midRadius = innerRadius + (outerRadius - innerRadius) / 2;
+        const posX = x + Math.cos(midAngle) * midRadius;
+        const posY = y + Math.sin(midAngle) * midRadius;
+
+        ctx.font = 'bold 12px "Manrope", sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 1;
+
+        const text = (percentage % 1 === 0 ? percentage.toFixed(0) : percentage.toFixed(1)) + '%';
+        ctx.fillText(text, posX, posY);
+      });
+      ctx.restore();
+    }
+  };
+
+  // Chart 2: Expense Breakdown (Donut Chart with percentage on each slice)
+  const catData = {{ analytics.category_breakdown|tojson }};
+  const donutCanvas = document.getElementById('expenseDonutChart');
+  if (donutCanvas && catData && catData.length) {
+    const palette = ['#059669', '#E76F51', '#0F766E', '#6EE7B7', '#D97706', '#64748B', '#182630'];
+    new Chart(donutCanvas, {
+      type: 'doughnut',
+      plugins: [donutPercentagePlugin],
+      data: {
+        labels: catData.map(c => c.category),
+        datasets: [{
+          data: catData.map(c => c.amount),
+          backgroundColor: catData.map((_, i) => palette[i % palette.length]),
+          borderWidth: 2,
+          borderColor: '#ffffff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '58%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0B1B36',
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: ctx => ' ' + ctx.label + ': ' + fmtInr(ctx.raw)
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Chart 3: Monthly Savings Trend (Line / Area Graph)
+  const savCanvas = document.getElementById('savingsTrendChart');
+  if (savCanvas && trendData && trendData.length) {
+    const labels = trendData.map(d => formatMonthLabel(d.label));
+    const savingsVals = trendData.map(d => d.savings !== undefined ? d.savings : (d.income - d.expenses));
+
+    new Chart(savCanvas, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Net Savings',
+          data: savingsVals,
+          borderColor: '#0F766E', // Deep teal / savings accent
+          backgroundColor: 'rgba(15, 118, 110, 0.12)',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#0F766E',
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2,
+          pointRadius: 4.5,
+          pointHoverRadius: 7,
+          fill: true,
+          tension: 0.35
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0B1B36',
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: ctx => ' Net Savings: ' + fmtInr(ctx.raw)
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: '#64748B', font: { size: 11, weight: '600' } }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: '#E5E7EB' },
+            ticks: { callback: fmtInr, color: '#64748B', font: { size: 11 } }
+          }
+        }
+      }
+    });
+  }
+</script>
+{% endblock %}
