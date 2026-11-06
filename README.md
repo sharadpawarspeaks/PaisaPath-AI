@@ -1,63 +1,224 @@
-# Personal Finance Advisor Bot
+# PaisaPath AI 💰
 
-A runnable Flask + SQLite personal finance workspace for tracking income, expenses, budgets, goals, reports, and AI-assisted educational insights. The deterministic Python financial engine calculates totals, savings, category spending, budget utilization, and trends before Gemini is asked to explain them.
+**Your Personal AI Financial Co-Pilot**
 
-## Features
+PaisaPath AI is a personal finance management platform built using Flask and SQLite that helps users track income, expenses, budgets, savings goals, and financial reports. It combines a deterministic Python financial engine with Gemini-powered AI insights to provide intelligent, data-driven financial guidance.
 
-- Secure registration, login, password hashing, and per-user data isolation
-- Income and expense recording with validation, editing, and deletion
-- Monthly budgets with history-aware suggested allocations
-- Savings goals with progress and contributions
-- Financial Report charts backed by current database data
-- Printable monthly reports
-- Gemini integration through a backend service with a rule-based fallback
-- PostgreSQL-ready SQLAlchemy configuration through `DATABASE_URL`
-- Responsive fintech UI and friendly error pages
+## 🚀 Features
 
-## Run locally
+- **User Authentication:** Secure registration, login, password hashing, and user-specific data isolation.
+- **Income Management:** Record, edit, track, and delete income transactions.
+- **Expense Tracking:** Monitor daily expenses and analyze spending patterns.
+- **Smart Budgeting:** Create monthly budgets with history-aware suggested allocations.
+- **Savings Goals:** Set financial goals, track progress, and record contributions.
+- **Financial Dashboard:** View income, expenses, savings, and financial summaries.
+- **Financial Reports:** Interactive charts powered by real database data.
+- **Printable Reports:** Generate printable monthly financial reports.
+- **AI Financial Assistant:** Gemini-powered educational insights with a rule-based fallback.
+- **Database Flexibility:** SQLite by default, with PostgreSQL support.
+- **Responsive UI:** User-friendly fintech interface with responsive layouts.
+
+## 🛠️ Tech Stack
+
+| Category | Technologies |
+|---|---|
+| Backend | Python, Flask |
+| Frontend | HTML, CSS, JavaScript |
+| Database | SQLite, PostgreSQL |
+| ORM | SQLAlchemy |
+| AI Integration | Google Gemini API |
+| Authentication | Flask Authentication, Password Hashing |
+| Testing | Pytest |
+| Deployment / Tunneling | Ngrok |
+
+## 📂 Project Structure
+
+```text
+PaisaPath-AI/
+│
+├── app.py
+├── seed.py
+├── requirements.txt
+├── .env.example
+├── .gitignore
+│
+├── instance/
+│   └── finance.db
+│
+├── models/
+│   └── Database models
+│
+├── routes/
+│   └── Application routes
+│
+├── services/
+│   ├── financial_engine.py
+│   ├── budget_engine.py
+│   └── ai_service.py
+│
+├── templates/
+│   └── HTML templates
+│
+├── static/
+│   ├── css/
+│   ├── js/
+│   └── images/
+│
+└── tests/
+    └── Application tests
+```
+
+## ⚙️ Installation & Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-username/PaisaPath-AI.git
+cd PaisaPath-AI
+```
+
+### 2. Create a Virtual Environment
 
 ```powershell
 python -m venv venv
+```
+
+### 3. Activate the Environment
+
+```powershell
 venv\Scripts\activate
+```
+
+### 4. Install Dependencies
+
+```bash
 pip install -r requirements.txt
+```
+
+### 5. Configure Environment Variables
+
+Create your `.env` file:
+
+```powershell
 Copy-Item .env.example .env
+```
+
+Configure the following variables:
+
+```env
+FLASK_SECRET_KEY=your-secret-key
+GEMINI_API_KEY=your-gemini-api-key
+DATABASE_URL=sqlite:///finance.db
+```
+
+**Note:** Gemini API is optional. Without an API key, the application uses its built-in rule-based financial guidance.
+
+### 6. Run the Application
+
+```bash
 python app.py
 ```
 
-Open `http://127.0.0.1:5000`. The SQLite database is created in `instance/finance.db` on first startup.
+Open your browser:
 
-Set a strong `FLASK_SECRET_KEY` in `.env`. Set `GEMINI_API_KEY` to enable Gemini analysis; leaving it blank keeps the application fully usable with deterministic fallback guidance. SQLite is the default. For PostgreSQL, set `DATABASE_URL` to a URL such as `postgresql+psycopg://user:password@localhost:5432/finance`.
-
-## Demo data
-
-```powershell
-python seed.py
+```text
+http://127.0.0.1:5000
 ```
 
-This creates `demo@example.com` with password `DemoPass123!` and a small sample dataset. This credential is for local demonstration only.
+The SQLite database is automatically created in `instance/finance.db` during the first startup.
 
-## Tests
+## 🤖 AI Integration
 
-```powershell
+PaisaPath AI integrates Google's Gemini API to generate educational financial insights.
+
+The application follows a deterministic-first approach:
+
+1. The Python Financial Engine calculates income, expenses, savings, category spending, and budget utilization.
+2. Structured financial metrics are passed to the AI service.
+3. Gemini interprets the calculated metrics and generates personalized educational insights.
+4. If Gemini is unavailable, a rule-based fallback provides financial guidance.
+
+**Key Principle:** Financial calculations are performed by Python, not generated by AI. This improves calculation reliability and consistency.
+
+## 🗄️ Database Configuration
+
+SQLite is used as the default database.
+
+For PostgreSQL, configure `DATABASE_URL` in your `.env` file:
+
+```env
+DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/finance
+```
+
+## 🧪 Running Tests
+
+Run the test suite:
+
+```bash
 python -m pytest -q
 ```
 
-The suite covers registration and login, protected routes, income and expense calculations, budget generation, goal contributions, AI fallback availability, and cross-user data isolation.
+Tests cover:
 
-## Ngrok
+- User registration and login
+- Protected application routes
+- Income and expense calculations
+- Budget generation
+- Savings goal contributions
+- AI fallback functionality
+- Cross-user data isolation
 
-Start the app with `python app.py`, then in another terminal run:
+## 🌐 Ngrok Demonstration
 
-```powershell
+To expose your locally running application for demonstration:
+
+**Terminal 1:**
+
+```bash
+python app.py
+```
+
+**Terminal 2:**
+
+```bash
 ngrok http 5000
 ```
 
-Use the generated HTTPS URL for your demonstration. No public URL is hardcoded.
+Ngrok generates a temporary HTTPS URL that can be shared for your project demonstration.
 
-## Architecture
+## 📊 Core Architecture
 
-`app.py` creates the Flask app and database tables. `models/` contains SQLAlchemy entities. `routes/` owns request handling and user ownership filters. `services/financial_engine.py` and `services/budget_engine.py` perform deterministic calculations. `services/ai_service.py` receives structured metrics and falls back safely when Gemini is unavailable. Templates and CSS provide the responsive interface.
+| Component | Responsibility |
+|---|---|
+| `app.py` | Flask application initialization and database setup |
+| `models/` | SQLAlchemy database entities |
+| `routes/` | Request handling and user-specific access control |
+| `financial_engine.py` | Financial calculations and metrics |
+| `budget_engine.py` | Budget calculations and suggested allocations |
+| `ai_service.py` | Gemini integration and rule-based fallback |
+| `templates/` | Frontend HTML pages |
+| `static/` | CSS, JavaScript, and visual assets |
+| `tests/` | Automated application testing |
 
-## Safety
+## 🔐 Security & Privacy
 
-This application provides educational budgeting and financial planning insights and is not a substitute for professional financial advice. It does not recommend securities or promise returns. Never commit `.env`, production credentials, or the demo password to a public deployment.
+- Password hashing for user authentication.
+- User-specific financial data isolation.
+- Protected application routes.
+- Environment-based secret and API key management.
+- Never commit `.env` files or production credentials.
+- Demo credentials should only be used in local demonstration environments.
+
+## ⚠️ Disclaimer
+
+PaisaPath AI provides educational budgeting and financial planning insights. It is not a substitute for professional financial advice. The application does not recommend securities or guarantee investment returns.
+
+## 👨‍💻 Project Vision
+
+**PaisaPath AI – Making Personal Finance Smarter.**
+
+Our goal is to simplify personal financial management through intelligent automation, reliable financial calculations, and AI-assisted insights.
+
+---
+
+⭐ If you find this project useful, consider giving it a star on GitHub!
