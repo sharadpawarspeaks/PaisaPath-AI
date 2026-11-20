@@ -17,8 +17,11 @@ class Config:
             _db_env = _db_env.replace("postgresql://", "postgresql+psycopg://", 1)
         SQLALCHEMY_DATABASE_URI = _db_env
     else:
-        (BASE_DIR / "instance").mkdir(parents=True, exist_ok=True)
-        SQLALCHEMY_DATABASE_URI = f"sqlite:///{(BASE_DIR / 'instance' / 'finance.db').as_posix()}"
+        try:
+            (BASE_DIR / "instance").mkdir(parents=True, exist_ok=True)
+            SQLALCHEMY_DATABASE_URI = f"sqlite:///{(BASE_DIR / 'instance' / 'finance.db').as_posix()}"
+        except OSError:
+            SQLALCHEMY_DATABASE_URI = "sqlite:////tmp/finance.db"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SESSION_PROTECTION = "strong"
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")

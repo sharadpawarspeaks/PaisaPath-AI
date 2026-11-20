@@ -14,7 +14,10 @@ def create_app(test_config=None):
     app.config.from_object(Config)
     if test_config:
         app.config.update(test_config)
-    Path(app.instance_path).mkdir(parents=True, exist_ok=True)
+    try:
+        Path(app.instance_path).mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
     db.init_app(app)
     login_manager.init_app(app)
 
