@@ -11,6 +11,10 @@ class Config:
     SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "dev-only-change-me")
     _db_env = os.getenv("DATABASE_URL", "")
     if _db_env and not _db_env.startswith("sqlite:///instance/"):
+        if _db_env.startswith("postgres://"):
+            _db_env = _db_env.replace("postgres://", "postgresql+psycopg://", 1)
+        elif _db_env.startswith("postgresql://") and not _db_env.startswith("postgresql+psycopg://"):
+            _db_env = _db_env.replace("postgresql://", "postgresql+psycopg://", 1)
         SQLALCHEMY_DATABASE_URI = _db_env
     else:
         (BASE_DIR / "instance").mkdir(parents=True, exist_ok=True)
